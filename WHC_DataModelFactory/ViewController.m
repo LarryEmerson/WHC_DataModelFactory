@@ -37,7 +37,9 @@
 @property (nonatomic , strong)IBOutlet  NSButton       * checkBox;
 @end
 
-@implementation ViewController
+@implementation ViewController{
+    NSString *curClassName;
+}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -66,13 +68,13 @@
     if(className.length == 0){
         className = kWHC_DEFAULT_CLASS_NAME;
     }
+    className=[@"DataModel_" stringByAppendingString:className];
+    curClassName=[className stringByAppendingString:@"_"];
     if(json && json.length){
         NSDictionary  * dict = nil;
-        if([json hasPrefix:@"<"]){
-            //xml
+        if([json hasPrefix:@"<"]){ //xml
             dict = [WHC_XMLParser dictionaryForXMLString:json];
-        }else{
-            //json
+        }else{ //json
             NSData  * jsonData = [json dataUsingEncoding:NSUTF8StringEncoding];
             dict = [NSJSONSerialization JSONObjectWithData:jsonData options:NSJSONReadingMutableLeaves error:NULL];
         }
@@ -84,6 +86,11 @@
         }
         _classField.stringValue = _classString;
         _classMField.stringValue = _classMString;
+        NSFileManager *file=[NSFileManager defaultManager];
+        NSString *path=[NSHomeDirectory( ) stringByAppendingString:@"/DataModels/"];
+        [file createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:nil];
+        [file createFileAtPath:[path  stringByAppendingPathComponent:[className stringByAppendingString:@".h"]] contents:[_classString dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
+        [file createFileAtPath:[path  stringByAppendingPathComponent:[className stringByAppendingString:@".m"]] contents:[_classMString dataUsingEncoding:NSUTF8StringEncoding] attributes:nil]; 
     }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored"-Wdeprecated-declarations"
@@ -105,47 +112,47 @@
                 if([subObject isKindOfClass:[NSDictionary class]]){
                     NSString * classContent = [self handleDataEngine:subObject key:keyArr[i]];
                     if(_checkBox.state == 0){
-                        [property appendFormat:kWHC_PROPERTY,keyArr[i],keyArr[i]];
-                        [_classString appendFormat:kWHC_CLASS,keyArr[i],classContent];
-                        [_classMString appendFormat:kWHC_CLASS_M,keyArr[i]];
+                        [property appendFormat:kWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],keyArr[i]];
+                        [_classString appendFormat:kWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]], classContent];
+                        [_classMString appendFormat:kWHC_CLASS_M,[curClassName stringByAppendingString: keyArr[i]]];
                     }else{
-                        [property appendFormat:kSWHC_PROPERTY,keyArr[i],keyArr[i]];
-                        [_classString appendFormat:kSWHC_CLASS,keyArr[i],keyArr[i],classContent];
+                        [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],keyArr[i]];
+                        [_classString appendFormat:kSWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]],keyArr[i],classContent];
                     }
                 }else if ([subObject isKindOfClass:[NSArray class]]){
                     NSString * classContent = [self handleDataEngine:subObject key:keyArr[i]];
                     if(_checkBox.state == 0){
                         [property appendFormat:kWHC_PROPERTY,@"NSArray",keyArr[i]];
-                        [_classString appendFormat:kWHC_CLASS,keyArr[i],classContent];
-                        [_classMString appendFormat:kWHC_CLASS_M,keyArr[i]];
+                        [_classString appendFormat:kWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]],classContent];
+                        [_classMString appendFormat:kWHC_CLASS_M,[curClassName stringByAppendingString: keyArr[i]]];
                     }else{
-                        [property appendFormat:kSWHC_PROPERTY,keyArr[i],@"NSArray"];
-                        [_classString appendFormat:kSWHC_CLASS,keyArr[i],keyArr[i],classContent];
+                        [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],@"NSArray"];
+                        [_classString appendFormat:kSWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]],keyArr[i],classContent];
                     }
                 }else if ([subObject isKindOfClass:[NSString class]]){
                     if(_checkBox.state == 0){
                         [property appendFormat:kWHC_PROPERTY,@"NSString",keyArr[i]];
                     }else{
-                        [property appendFormat:kSWHC_PROPERTY,keyArr[i],@"String"];
+                        [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],@"String"];
                     }
                 }else if ([subObject isKindOfClass:[NSNumber class]]){
                     if(_checkBox.state == 0){
                         [property appendFormat:kWHC_PROPERTY,@"NSNumber",keyArr[i]];
                     }else{
-                        [property appendFormat:kSWHC_PROPERTY,keyArr[i],@"NSNumber"];
+                        [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],@"NSNumber"];
                     }
                 }else{
                     if(subObject == nil){
                         if(_checkBox.state == 0){
                             [property appendFormat:kWHC_PROPERTY,@"NSString",keyArr[i]];
                         }else{
-                            [property appendFormat:kSWHC_PROPERTY,keyArr[i],@"String"];
+                            [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],@"String"];
                         }
                     }else if([subObject isKindOfClass:[NSNull class]]){
                         if(_checkBox.state == 0){
                             [property appendFormat:kWHC_PROPERTY,@"NSString",keyArr[i]];
                         }else{
-                            [property appendFormat:kSWHC_PROPERTY,keyArr[i],@"String"];
+                            [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],@"String"];
                         }
                     }
                 }
