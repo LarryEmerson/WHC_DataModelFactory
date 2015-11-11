@@ -43,7 +43,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-
+    
     _classString = [NSMutableString new];
     _classMString = [NSMutableString new];
     _classField.editable = NO;
@@ -70,6 +70,9 @@
     }
     className=[@"DataModel_" stringByAppendingString:className];
     curClassName=[className stringByAppendingString:@"_"];
+    
+    [_classString appendString:@"#import <UIKit/UIKit.h>\n"];
+    [_classMString appendFormat:@"#import \"%@.h\"\n\n",className];
     if(json && json.length){
         NSDictionary  * dict = nil;
         if([json hasPrefix:@"<"]){ //xml
@@ -84,13 +87,17 @@
         }else{
             [_classString appendFormat:kSWHC_CLASS,className,className,[self handleDataEngine:dict key:@""]];
         }
+        
+        
         _classField.stringValue = _classString;
         _classMField.stringValue = _classMString;
+        
+        
         NSFileManager *file=[NSFileManager defaultManager];
         NSString *path=[NSHomeDirectory( ) stringByAppendingString:@"/DataModels/"];
         [file createDirectoryAtPath:path withIntermediateDirectories:YES attributes:nil error:nil];
         [file createFileAtPath:[path  stringByAppendingPathComponent:[className stringByAppendingString:@".h"]] contents:[_classString dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
-        [file createFileAtPath:[path  stringByAppendingPathComponent:[className stringByAppendingString:@".m"]] contents:[_classMString dataUsingEncoding:NSUTF8StringEncoding] attributes:nil]; 
+        [file createFileAtPath:[path  stringByAppendingPathComponent:[className stringByAppendingString:@".m"]] contents:[_classMString dataUsingEncoding:NSUTF8StringEncoding] attributes:nil];
     }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored"-Wdeprecated-declarations"
@@ -186,7 +193,7 @@
 }
 - (void)setRepresentedObject:(id)representedObject {
     [super setRepresentedObject:representedObject];
-
+    
     // Update the view, if already loaded.
 }
 
