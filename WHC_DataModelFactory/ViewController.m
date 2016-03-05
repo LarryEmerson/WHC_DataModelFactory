@@ -25,10 +25,11 @@
 
 #define kSWHC_CLASS @("\n@objc(%@)\nclass %@ :NSObject{\n%@\n}")
 #define kSWHC_PROPERTY @("var %@: %@!;\n")
-@interface ViewController (){
+@interface ViewController ()<NSTextFieldDelegate>{
     NSMutableString       *   _classString;        //存类头文件内容
     NSMutableString       *   _classMString;       //存类源文件内容
 }
+@property (unsafe_unretained) IBOutlet NSTextView *textView;
 
 @property (nonatomic , strong)IBOutlet  NSTextField  * classNameField;
 @property (nonatomic , strong)IBOutlet  NSTextField  * jsonField;
@@ -39,6 +40,7 @@
 
 @implementation ViewController{
     NSString *curClassName;
+    int cursePosition;
 }
 
 - (void)viewDidLoad {
@@ -52,11 +54,94 @@
     _classField.drawsBackground = NO;
     _classMField.drawsBackground = NO;
     // Do any additional setup after loading the view.
+    [_jsonField setDelegate:self];
+    
 }
 
 - (IBAction)clickRadioButtone:(NSButton *)sender{
 }
-
+- (BOOL)control:(NSControl *)control textShouldEndEditing:(NSText *)fieldEditor{
+    NSString *str=_jsonField.stringValue;
+    str=[str stringByReplacingOccurrencesOfString:@"\\\"" withString: @"\""];
+    str=[str stringByReplacingOccurrencesOfString:@"\\\\u" withString: @"\\u"];
+    str=[str stringByReplacingOccurrencesOfString:@"\"{" withString: @"{"];
+    str=[str stringByReplacingOccurrencesOfString:@"}\"" withString: @"}"];
+    str=[str stringByReplacingOccurrencesOfString:@"\"[" withString: @"["];
+    str=[str stringByReplacingOccurrencesOfString:@"]\"" withString: @"]"];
+    [_jsonField setStringValue:str];
+    NSString *chineseStr=[NSString stringWithCString:[str cStringUsingEncoding:NSUTF8StringEncoding] encoding:NSNonLossyASCIIStringEncoding];
+    cursePosition=0;
+    id jsonValue=[self JSONValue:chineseStr];
+    chineseStr=@"";
+    chineseStr=[self returnFormattedString:jsonValue With:chineseStr];
+    [_textView setString:chineseStr];
+    return YES;
+}
+-(NSString *) getPosition{
+    NSString *str=@"";
+    for (int i=0; i<cursePosition; i++) {
+        str=[str stringByAppendingString:@"\t"];
+    }
+    return str;
+}
+-(NSString *) addOneLineWith:(NSString *) str To:(NSString *) to{
+    return [NSString stringWithFormat:@"%@%@\n",to,str];
+}
+-(NSString *) returnFormattedString:(id) obj With:(NSString *) thestr{
+    NSString *str=thestr;
+    if([obj isKindOfClass:[NSDictionary class]]){
+        NSDictionary *dic=obj;
+        str=[self addOneLineWith:[[self getPosition] stringByAppendingString:@"{"] To:str];
+        cursePosition++;
+        for (int i=0; i<dic.allKeys.count; i++) {
+            NSString *key=[dic.allKeys objectAtIndex:i];
+            id tmp=[dic objectForKey:key];
+            if([tmp isKindOfClass:[NSDictionary class]]||[tmp isKindOfClass:[NSArray class]]){
+                str=[self addOneLineWith:[[self getPosition] stringByAppendingString:[NSString stringWithFormat:@"\"%@\":",key]] To:str];
+                str=[self returnFormattedString:tmp With:str];
+                if(i<dic.allKeys.count-1){
+                    str=[str stringByAppendingString:@",\n"];
+                }else{
+                    str=[str stringByAppendingString:@"\n"];
+                }
+            }else{
+                id checkType=[dic objectForKey:key];
+                BOOL isString=[checkType isKindOfClass:[NSString class]];
+                NSString *formatStr=isString?@"\"%@\":\"%@\"":@"\"%@\":%@";
+                if(i<dic.allKeys.count-1){
+                    formatStr=[formatStr stringByAppendingString:@","];
+                }
+                str=[self addOneLineWith:[[self getPosition] stringByAppendingString:[NSString stringWithFormat:formatStr,key,checkType]] To:str];
+            }
+        }
+        cursePosition--;
+        str=[str stringByAppendingString:[[self getPosition] stringByAppendingString:@"}"]];
+    }else if([obj isKindOfClass:[NSArray class]]){
+        str=[self addOneLineWith:[[self getPosition] stringByAppendingString:@"["] To:str];
+        cursePosition++;
+        NSArray *array=obj;
+        for (int i=0; i<array.count; i++) {
+            id tmp=[array objectAtIndex:i];
+            str=[self returnFormattedString:tmp With:str];
+            if(i<array.count-1){
+                str=[str stringByAppendingString:@",\n"];
+            }else{
+                str=[str stringByAppendingString:@"\n"];
+            }
+        }
+        cursePosition--;
+        str=[str stringByAppendingString:[[self getPosition] stringByAppendingString:@"]"]];
+    }
+    return str;
+}
+-(id)JSONValue:(NSString *) str {
+    //    NSLogObject(self);
+    NSData* data = [str dataUsingEncoding:NSUTF8StringEncoding];
+    __autoreleasing NSError* error = nil;
+    id result = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&error];
+    if (error != nil) return nil;
+    return result;
+}
 - (IBAction)clickMakeButton:(NSButton*)sender{
     [_classString deleteCharactersInRange:NSMakeRange(0, _classString.length)];
     [_classMString deleteCharactersInRange:NSMakeRange(0, _classMString.length)];
@@ -120,8 +205,9 @@
                     NSString * classContent = [self handleDataEngine:subObject key:keyArr[i]];
                     if(_checkBox.state == 0){
                         [property appendFormat:kWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],keyArr[i]];
-                        [_classString appendFormat:kWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]], classContent];
-                        [_classMString appendFormat:kWHC_CLASS_M,[curClassName stringByAppendingString: keyArr[i]]];
+                        NSString *name=[keyArr[i] stringByReplacingCharactersInRange:NSMakeRange(0,1) withString:[[keyArr[i] substringToIndex:1] uppercaseString]];
+                        [_classString appendFormat:kWHC_CLASS,[curClassName stringByAppendingString: name], classContent];
+                        [_classMString appendFormat:kWHC_CLASS_M,[curClassName stringByAppendingString: name]];
                     }else{
                         [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],keyArr[i]];
                         [_classString appendFormat:kSWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]],keyArr[i],classContent];
@@ -130,8 +216,9 @@
                     NSString * classContent = [self handleDataEngine:subObject key:keyArr[i]];
                     if(_checkBox.state == 0){
                         [property appendFormat:kWHC_PROPERTY,@"NSArray",keyArr[i]];
-                        [_classString appendFormat:kWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]],classContent];
-                        [_classMString appendFormat:kWHC_CLASS_M,[curClassName stringByAppendingString: keyArr[i]]];
+                        NSString *name=[keyArr[i] stringByReplacingCharactersInRange:NSMakeRange(0,1) withString:[[keyArr[i] substringToIndex:1] uppercaseString]];
+                        [_classString appendFormat:kWHC_CLASS,[curClassName stringByAppendingString: name],classContent];
+                        [_classMString appendFormat:kWHC_CLASS_M,[curClassName stringByAppendingString: name]];
                     }else{
                         [property appendFormat:kSWHC_PROPERTY,[curClassName stringByAppendingString: keyArr[i]],@"NSArray"];
                         [_classString appendFormat:kSWHC_CLASS,[curClassName stringByAppendingString: keyArr[i]],keyArr[i],classContent];
