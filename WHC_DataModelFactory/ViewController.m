@@ -33,8 +33,8 @@
 
 @property (nonatomic , strong)IBOutlet  NSTextField  * classNameField;
 @property (nonatomic , strong)IBOutlet  NSTextField  * jsonField;
-@property (nonatomic , strong)IBOutlet  NSTextField  * classField;
-@property (nonatomic , strong)IBOutlet  NSTextField  * classMField;
+@property (nonatomic , strong)IBOutlet  NSTextView  * classField;
+@property (nonatomic , strong)IBOutlet  NSTextView  * classMField;
 @property (nonatomic , strong)IBOutlet  NSButton       * checkBox;
 @end
 
@@ -174,8 +174,8 @@
         }
         
         
-        _classField.stringValue = _classString;
-        _classMField.stringValue = _classMString;
+        _classField.string = _classString;
+        _classMField.string = _classMString;
         
         
         NSFileManager *file=[NSFileManager defaultManager];
